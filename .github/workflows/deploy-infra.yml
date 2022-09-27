@@ -1,0 +1,32 @@
+name: Deploy AWS Infra
+
+on:
+  push:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - uses: aws-actions/setup-sam@v1
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.REGION }}
+      - name: SAM Validate
+        run: |
+          sam validate
+      - name: SAM Build
+        run: |
+          sam build
+      - name: SAM Deploy
+        run: |
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
