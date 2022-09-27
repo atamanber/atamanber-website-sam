@@ -87,8 +87,8 @@ Resources:
         - AttributeName: "stat"
           KeyType: "HASH"
       ProvisionedThroughput:
-        ReadCapacityUnits: "1"
-        WriteCapacityUnits: "1"
+        ReadCapacityUnits: "3"
+        WriteCapacityUnits: "3"
 
   MyAPI:
     Type: AWS::Serverless::HttpApi
