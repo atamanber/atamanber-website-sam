@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  atamanber-sam
+
+  Sample SAM Template for atamanber-sam
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+  Api:
+    TracingEnabled: True
+
+Resources:
+  MyWebsite:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      BucketName: atamanber.com
+  
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: WebPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: 
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOAI}"
+            Action: "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref MyWebsite
+                - /*
+      Bucket: !Ref MyWebsite
+
+  MyDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          Compress: 'true'
+          ViewerProtocolPolicy: redirect-to-https
+          TargetOriginId: s3-website
+          DefaultTTL: 86400
+          MinTTL: 1
+          MaxTTL: 86400
+          ForwardedValues:
+            QueryString: false
+        PriceClass: PriceClass_100
+        Origins:
+          - DomainName: !GetAtt MyWebsite.DomainName
+            Id: s3-website
+            S3OriginConfig:
+              OriginAccessIdentity:
+                Fn::Sub: 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+        Enabled: 'true'
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        ViewerCertificate:
+          AcmCertificateArn: arn:aws:acm:us-east-1:964964454604:certificate/6d10641c-2003-4c98-91d3-509178fcf1c3
+          SslSupportMethod: sni-only
+        Aliases:
+          - www.atamanber.com
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "Serverless website in S3"
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: atamanber-stats
+      AttributeDefinitions:
+        - AttributeName: "stat"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "stat"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+
+  MyAPI:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Domain:
+        DomainName: api.atamanber.com
+        CertificateArn: arn:aws:acm:eu-central-1:964964454604:certificate/c8120608-86ba-4d6f-87e4-5104fffb4ac8
+        EndpointConfiguration: REGIONAL
+        
+
+  GetCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Policies:
+        - AmazonDynamoDBFullAccess
+      CodeUri: get-function/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi 
+          Properties:
+            ApiId: !Ref MyAPI
+            Path: /getVisitor
+            Method: ANY
+
+  IncreaseVisitorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Policies:
+        - AmazonDynamoDBFullAccess
+      CodeUri: increase-visitor-function/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi 
+          Properties:
+            ApiId: !Ref MyAPI
+            Path: /increaseVisitor
+            Method: ANY
+
+# Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+
