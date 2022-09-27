@@ -87,8 +87,8 @@ Resources:
         - AttributeName: "stat"
           KeyType: "HASH"
       ProvisionedThroughput:
-        ReadCapacityUnits: "3"
-        WriteCapacityUnits: "3"
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
 
   MyAPI:
     Type: AWS::Serverless::HttpApi
@@ -104,7 +104,7 @@ Resources:
     Properties:
       Policies:
         - AmazonDynamoDBFullAccess
-      CodeUri: get-function/
+      CodeUri: functions/get-function/
       Handler: app.lambda_handler
       Runtime: python3.9
       Architectures:
@@ -122,7 +122,7 @@ Resources:
     Properties:
       Policies:
         - AmazonDynamoDBFullAccess
-      CodeUri: increase-visitor-function/
+      CodeUri: functions/increase-visitor-function/
       Handler: app.lambda_handler
       Runtime: python3.9
       Architectures:
